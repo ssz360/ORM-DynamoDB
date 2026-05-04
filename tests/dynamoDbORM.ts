@@ -487,8 +487,16 @@ describe('dynamoDbORMteORM - Issue 5: Delete Cascade', () => {
         const retrieved = await TestParentWithArray.get('10');
         expect(retrieved).toBeNull();
 
-        // Try to load another parent with same pattern to verify link records are cleaned
-        // (This is indirect verification since we can't easily query __link records)
+        // Children themselves must still exist — parent.delete() only removes links, not child entities
+        const child400 = await TestChild.get('400');
+        const child401 = await TestChild.get('401');
+        expect(child400).not.toBeNull();
+        expect(child401).not.toBeNull();
+
+        // Backlinks pointing back to the deleted parent were cleaned up,
+        // so the children can now be deleted without triggering the guard
+        await expect(child400!.delete()).resolves.not.toThrow();
+        await expect(child401!.delete()).resolves.not.toThrow();
     });
 });
 
@@ -643,6 +651,23 @@ describe('dynamoDbORMteORM - Error Handling', () => {
         const results = await TestItem.queryBetween('9999', '9999');
         expect(results).toEqual([]);
     });
+
+    it('should throw when deleting an entity still referenced by another', async () => {
+        const child = new TestChild(9001, 'Referenced Child');
+        await child.insert();
+
+        const parent = new TestParentWithNonInlineLink(9001);
+        parent.child = child;
+        await parent.insert();
+
+        await expect(child.delete()).rejects.toThrow(
+            /cannot delete.*still referenced/i
+        );
+
+        // Cleanup
+        await parent.delete();
+        await child.delete();
+    });
 });
 
 describe('dynamoDbORMteORM - Child Deletion Cleanup via Back-References', () => {
@@ -654,7 +679,7 @@ describe('dynamoDbORMteORM - Child Deletion Cleanup via Back-References', () => 
         await cleanupTestData('__backlink');
     });
 
-    it('should clean up stale forward link when child is deleted (non-inline LinkObject)', async () => {
+    it('should block deletion of a child still referenced by a parent (non-inline LinkObject)', async () => {
         const child = new TestChild(600, 'Deletable Child');
         await child.insert();
 
@@ -662,21 +687,20 @@ describe('dynamoDbORMteORM - Child Deletion Cleanup via Back-References', () => 
         parent.child = child;
         await parent.insert();
 
-        // Delete the child — should remove the forward link in the parent's table
+        // Deletion should be blocked while the parent still references the child
+        await expect(child.delete()).rejects.toThrow();
+
+        // Delete parent first — removes the forward link and backlink records
+        await parent.delete();
+
+        // Child can now be deleted (no more inbound references)
         await child.delete();
 
-        // The child itself should be gone
         const deletedChild = await TestChild.get('600');
         expect(deletedChild).toBeNull();
-
-        // loadLinks should gracefully return undefined (no stale record, no crash)
-        const retrievedParent = await TestParentWithNonInlineLink.get('20');
-        expect(retrievedParent).toBeDefined();
-        await retrievedParent!.loadLinks();
-        expect(retrievedParent!.child).toBeUndefined();
     });
 
-    it('should clean up forward links from all parents when shared child is deleted (LinkArray)', async () => {
+    it('should block deletion of a shared child still referenced by multiple parents (LinkArray)', async () => {
         const child = new TestChild(601, 'Shared Child');
         await child.insert();
 
@@ -688,20 +712,23 @@ describe('dynamoDbORMteORM - Child Deletion Cleanup via Back-References', () => 
         parent2.children = [child];
         await parent2.insert();
 
-        // Delete the shared child
+        // Deletion should be blocked while both parents still reference the child
+        await expect(child.delete()).rejects.toThrow();
+
+        // Delete first parent — one reference remains
+        await parent1.delete();
+        await expect(child.delete()).rejects.toThrow();
+
+        // Delete second parent — no references remain
+        await parent2.delete();
+
+        // Child can now be deleted
         await child.delete();
-
-        // Both parents should have no children after loadLinks
-        const retrievedParent1 = await TestParentWithArray.get('21');
-        await retrievedParent1!.loadLinks();
-        expect(retrievedParent1!.children).toHaveLength(0);
-
-        const retrievedParent2 = await TestParentWithArray.get('22');
-        await retrievedParent2!.loadLinks();
-        expect(retrievedParent2!.children).toHaveLength(0);
+        const deletedChild = await TestChild.get('601');
+        expect(deletedChild).toBeNull();
     });
 
-    it('should not leave orphan back-reference records after child is deleted', async () => {
+    it('should not leave orphan link records after parent is deleted and child is re-created', async () => {
         const child = new TestChild(602, 'Back-Ref Check');
         await child.insert();
 
@@ -709,17 +736,22 @@ describe('dynamoDbORMteORM - Child Deletion Cleanup via Back-References', () => 
         parent.child = child;
         await parent.insert();
 
+        // Deletion blocked while referenced
+        await expect(child.delete()).rejects.toThrow();
+
+        // Delete the parent — cleans up forward link and back-reference on the child
+        await parent.delete();
+
+        // Child can now be deleted
         await child.delete();
 
-        // Re-save child under the same ID — if a stale back-reference existed,
-        // loading links on the parent would still find data. With cleanup, it must be empty.
+        // Re-save child under the same ID — no stale back-references should remain
         const newChild = new TestChild(602, 'Re-Created Child');
         await newChild.insert();
 
+        // The parent is gone; the re-created child carries no stale links
         const retrievedParent = await TestParentWithNonInlineLink.get('23');
-        await retrievedParent!.loadLinks();
-        // Forward link was deleted when original child was deleted, so this should still be undefined
-        expect(retrievedParent!.child).toBeUndefined();
+        expect(retrievedParent).toBeNull();
 
         // Cleanup
         await newChild.delete();

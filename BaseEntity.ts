@@ -263,6 +263,29 @@ export class BaseEntity {
         const metadata = this.getMetadata();
         const key = this.getKey();
 
+        // Guard: refuse deletion if other entities still reference this one via backlinks.
+        if (metadata.sortKeyName) {
+            const itemHKVal = String(key[metadata.hashKeyName]);
+            const itemSKVal = String(key[metadata.sortKeyName]);
+            const backlinkPrefix = `${encodeLinkSegment(itemHKVal)}#${encodeLinkSegment(itemSKVal)}#`;
+
+            const inboundBacklinks = await paginatedQuery({
+                TableName: metadata.tableName,
+                KeyConditionExpression: '#pk = :pkval AND begins_with(#sk, :skprefix)',
+                ExpressionAttributeNames: { '#pk': metadata.hashKeyName, '#sk': metadata.sortKeyName },
+                ExpressionAttributeValues: {
+                    ':pkval': '__backlink',
+                    ':skprefix': backlinkPrefix
+                }
+            });
+
+            if (inboundBacklinks.length > 0) {
+                throw new Error(
+                    `Cannot delete: still referenced by ${inboundBacklinks.length} record(s). Remove all references first.`
+                );
+            }
+        }
+
         // Clean up non-inline link records before deleting the parent to prevent orphans.
         if (metadata.sortKeyName) {
             const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
@@ -303,43 +326,6 @@ export class BaseEntity {
                     }
                 }));
             }
-        }
-
-        // Clean up forward link records pointing TO this item (child-side cleanup via back-references).
-        if (metadata.sortKeyName) {
-            const itemHKVal = String(key[metadata.hashKeyName]);
-            const itemSKVal = String(key[metadata.sortKeyName]);
-            const backlinkPrefix = `${encodeLinkSegment(itemHKVal)}#${encodeLinkSegment(itemSKVal)}#`;
-
-            const backlinks = await paginatedQuery({
-                TableName: metadata.tableName,
-                KeyConditionExpression: '#pk = :pkval AND begins_with(#sk, :skprefix)',
-                ExpressionAttributeNames: { '#pk': metadata.hashKeyName, '#sk': metadata.sortKeyName },
-                ExpressionAttributeValues: {
-                    ':pkval': '__backlink',
-                    ':skprefix': backlinkPrefix
-                }
-            });
-
-            await Promise.all(backlinks.map(async (backlink: any) => {
-                // Delete the forward link record in the parent's table
-                const fwdSKVal = `${encodeLinkSegment(backlink.parentHashKey)}#${encodeLinkSegment(backlink.parentSortKey)}#${encodeLinkSegment(backlink.propertyKey)}#${encodeLinkSegment(itemHKVal)}#${encodeLinkSegment(itemSKVal)}`;
-                await getDocClient().send(new DeleteCommand({
-                    TableName: backlink.parentTableName,
-                    Key: {
-                        [backlink.parentHashKeyName]: '__link',
-                        [backlink.parentSortKeyName]: fwdSKVal
-                    }
-                }));
-                // Delete the back-reference record itself
-                await getDocClient().send(new DeleteCommand({
-                    TableName: metadata.tableName,
-                    Key: {
-                        [metadata.hashKeyName]: backlink[metadata.hashKeyName],
-                        [metadata.sortKeyName!]: backlink[metadata.sortKeyName!]
-                    }
-                }));
-            }));
         }
 
         await getDocClient().send(new DeleteCommand({
