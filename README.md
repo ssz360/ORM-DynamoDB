@@ -151,14 +151,23 @@ async function run() {
 **Static Methods:**
 - `get(sortKeyValue)` - Retrieve a single entity by sort key
 - `query(options)` - Query entities with custom options
-- `queryAll(limit?)` - Query all entities in the partition
-- `queryEquals(sortKeyValue, limit?)` - Query entities with exact sort key match
-- `queryStartsWith(prefix, limit?)` - Query entities with sort key prefix
-- `queryBetween(start, end, limit?)` - Query entities with sort key in range
-- `queryGreaterThan(value, limit?)` - Query entities with sort key greater than value
-- `queryLessThan(value, limit?)` - Query entities with sort key less than valuesort key
+- `queryAll(options?)` - Query all entities in the partition
+- `queryEquals(sortKeyValue, options?)` - Query entities with exact sort key match
+- `queryStartsWith(prefix, options?)` - Query entities with sort key prefix
+- `queryBetween(start, end, options?)` - Query entities with sort key in range
+- `queryGreaterThan(value, options?)` - Query entities with sort key greater than value
+- `queryLessThan(value, options?)` - Query entities with sort key less than value
 - `query(options)` - Query entities in the partition
 - `configure(client)` - Set the DynamoDB client globally
+
+Helper methods accept a query options object, for example:
+
+```ts
+const recentOrders = await Order.queryGreaterThan('2024-01-01', {
+  limit: 20,
+  scanIndexForward: false,
+});
+```
 
 ### Features
 

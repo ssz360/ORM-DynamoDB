@@ -636,8 +636,19 @@ describe('dynamoDbORMteORM - Query Operations', () => {
     });
 
     it('should query with limit', async () => {
-        const results = await TestItem.queryAll(3);
+        const results = await TestItem.queryAll({ limit: 3 });
         expect(results.length).toBe(3);
+    });
+
+    it('should support query helper options objects', async () => {
+        const allResults = await TestItem.queryAll({ limit: 3, scanIndexForward: false });
+        expect(allResults.length).toBe(3);
+        expect(allResults[0].id).toBeGreaterThan(allResults[1].id);
+
+        const greaterThanResults = await TestItem.queryGreaterThan('50', { limit: 2, scanIndexForward: false });
+        expect(greaterThanResults.length).toBe(2);
+        expect(greaterThanResults.every(r => r.id > 50)).toBe(true);
+        expect(greaterThanResults[0].id).toBeGreaterThan(greaterThanResults[1].id);
     });
 });
 

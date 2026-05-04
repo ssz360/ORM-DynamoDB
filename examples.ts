@@ -553,8 +553,7 @@ async function q1FinanceReport() {
     const q1Orders = await Order.queryBetween('2024-01-01', '2024-04-01');
 
     // Or: latest 20 orders since Jan 1
-    const recentOrders = await Order.query({
-        sortKeyCondition: { type: 'greaterThan', value: '2024-01-01' },
+    const recentOrders = await Order.queryGreaterThan('2024-01-01', {
         limit: 20,
         scanIndexForward: false, // newest first
     });

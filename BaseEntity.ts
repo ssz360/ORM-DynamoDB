@@ -10,6 +10,8 @@ import { LINKS_METADATA, TO_DB_MODEL_METADATA, FROM_DB_MODEL_METADATA } from './
 import type { LinkMetadata, QueryOptions, EntityMetadata } from './types';
 import { configureClient, getDocClient, paginatedQuery, encodeLinkSegment } from './client';
 
+type QueryHelperOptions = Omit<QueryOptions, 'sortKeyCondition'>;
+
 export class BaseEntity {
 
     protected getMetadata(): EntityMetadata {
@@ -560,42 +562,42 @@ export class BaseEntity {
         });
     }
 
-    static async queryAll<T extends BaseEntity>(this: new (...args: any[]) => T, limit?: number): Promise<T[]> {
-        return (this as any).query({ limit });
+    static async queryAll<T extends BaseEntity>(this: new (...args: any[]) => T, options?: QueryHelperOptions): Promise<T[]> {
+        return (this as any).query(options);
     }
 
-    static async queryStartsWith<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyPrefix: string, limit?: number): Promise<T[]> {
+    static async queryStartsWith<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyPrefix: string, options?: QueryHelperOptions): Promise<T[]> {
         return (this as any).query({
             sortKeyCondition: { type: 'startsWith', value: sortKeyPrefix },
-            limit
+            ...options
         });
     }
 
-    static async queryBetween<T extends BaseEntity>(this: new (...args: any[]) => T, start: any, end: any, limit?: number): Promise<T[]> {
+    static async queryBetween<T extends BaseEntity>(this: new (...args: any[]) => T, start: any, end: any, options?: QueryHelperOptions): Promise<T[]> {
         return (this as any).query({
             sortKeyCondition: { type: 'between', start, end },
-            limit
+            ...options
         });
     }
 
-    static async queryGreaterThan<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyValue: any, limit?: number): Promise<T[]> {
+    static async queryGreaterThan<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyValue: any, options?: QueryHelperOptions): Promise<T[]> {
         return (this as any).query({
             sortKeyCondition: { type: 'greaterThan', value: sortKeyValue },
-            limit
+            ...options
         });
     }
 
-    static async queryLessThan<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyValue: any, limit?: number): Promise<T[]> {
+    static async queryLessThan<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyValue: any, options?: QueryHelperOptions): Promise<T[]> {
         return (this as any).query({
             sortKeyCondition: { type: 'lessThan', value: sortKeyValue },
-            limit
+            ...options
         });
     }
 
-    static async queryEquals<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyValue: any, limit?: number): Promise<T[]> {
+    static async queryEquals<T extends BaseEntity>(this: new (...args: any[]) => T, sortKeyValue: any, options?: QueryHelperOptions): Promise<T[]> {
         return (this as any).query({
             sortKeyCondition: { type: 'equals', value: sortKeyValue },
-            limit
+            ...options
         });
     }
 }
