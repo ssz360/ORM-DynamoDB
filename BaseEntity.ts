@@ -93,20 +93,22 @@ export class BaseEntity {
         };
     }
 
-    async insert() {
+    async insert(cascadeSave: boolean = false) {
         const metadata = this.getMetadata();
 
-        // Save linked entities first (cascade save)
-        const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
-        for (const link of links) {
-            const value = (this as any)[link.propertyKey];
-            if (value !== undefined && value !== null) {
-                if (Array.isArray(value)) {
-                    // Save all linked entities in parallel
-                    await Promise.all(value.map((linkedItem: BaseEntity) => linkedItem.insert()));
-                } else {
-                    // Save single linked entity
-                    await (value as BaseEntity).insert();
+        // Save linked entities first (cascade save) only if cascadeSave is true
+        if (cascadeSave) {
+            const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
+            for (const link of links) {
+                const value = (this as any)[link.propertyKey];
+                if (value !== undefined && value !== null) {
+                    if (Array.isArray(value)) {
+                        // Save all linked entities in parallel
+                        await Promise.all(value.map((linkedItem: BaseEntity) => linkedItem.insert(true)));
+                    } else {
+                        // Save single linked entity
+                        await (value as BaseEntity).insert(true);
+                    }
                 }
             }
         }
@@ -122,6 +124,7 @@ export class BaseEntity {
         // Record shape: { [hashKey]: '__link', [sortKey]: '{parentHK}#{parentSK}#{property}#{linkedHK}#{linkedSK}',
         //                 linkedHashKey, linkedSortKey, isArray }
         // Requires the parent entity table to have a sort key.
+        const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
         const nonInlineLinks = links.filter(link => {
             const isInline = link.inline ?? false;
             return !isInline;

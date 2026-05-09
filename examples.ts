@@ -228,6 +228,173 @@ export class Order extends BaseEntity {
     }
 }
 
+/**
+ * SOCIAL USER
+ */
+@Entity('test', 'hKey', 'sKey')
+class SocialUser extends BaseEntity {
+    @HashKeyValue
+    get hashKey() {
+        return 'SOCIAL_USER';
+    }
+
+    @SortKeyValue
+    get sortKey() {
+        return this.userId;
+    }
+
+    userId: string;
+    handle: string;
+    displayName: string;
+    bio: string;
+
+    constructor(userId: string = '', handle: string = '', displayName: string = '', bio: string = '') {
+        super();
+        this.userId = userId;
+        this.handle = handle;
+        this.displayName = displayName;
+        this.bio = bio;
+    }
+
+    get profileLabel(): string {
+        return `@${this.handle} (${this.displayName})`;
+    }
+}
+
+/**
+ * SOCIAL COMMENT
+ */
+@Entity('test', 'hKey', 'sKey')
+class SocialComment extends BaseEntity {
+    @HashKeyValue
+    get hashKey() {
+        return 'COMMENT';
+    }
+
+    @SortKeyValue
+    get sortKey() {
+        return this.commentId;
+    }
+
+    commentId: string;
+    body: string;
+
+    @LinkObject(SocialUser)
+    author: SocialUser | undefined;
+
+    @LinkArray(SocialUser)
+    likedBy: SocialUser[] = [];
+
+    createdAt: Date;
+
+    constructor(commentId: string = '', body: string = '', author?: SocialUser) {
+        super();
+        this.commentId = commentId;
+        this.body = body;
+        this.author = author;
+        this.createdAt = new Date();
+    }
+
+    like(user: SocialUser) {
+        if (!this.likedBy.some(existing => existing.userId === user.userId)) {
+            this.likedBy.push(user);
+        }
+    }
+
+    @ToDbModel
+    static toDbModel(comment: SocialComment) {
+        return {
+            createdAt: comment.createdAt.toISOString()
+        };
+    }
+
+    @FromDbModel
+    static fromDbModel(item: { createdAt?: string }) {
+        return {
+            createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
+        };
+    }
+}
+
+/**
+ * SOCIAL POST
+ */
+@Entity('test', 'hKey', 'sKey')
+class SocialPost extends BaseEntity {
+    @HashKeyValue
+    get hashKey() {
+        return 'POST';
+    }
+
+    @SortKeyValue
+    get sortKey() {
+        return this.postId;
+    }
+
+    postId: string;
+    body: string;
+    tags: string[];
+
+    @LinkObject(SocialUser)
+    author: SocialUser | undefined;
+
+    @LinkArray(SocialComment)
+    comments: SocialComment[] = [];
+
+    @LinkArray(SocialUser)
+    likedBy: SocialUser[] = [];
+
+    createdAt: Date;
+    updatedAt: Date;
+
+    constructor(postId: string = '', body: string = '', author?: SocialUser, tags: string[] = []) {
+        super();
+        this.postId = postId;
+        this.body = body;
+        this.author = author;
+        this.tags = tags;
+        this.comments = [];
+        this.likedBy = [];
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    addComment(comment: SocialComment) {
+        this.comments.push(comment);
+        this.updatedAt = new Date();
+    }
+
+    like(user: SocialUser) {
+        if (!this.likedBy.some(existing => existing.userId === user.userId)) {
+            this.likedBy.push(user);
+            this.updatedAt = new Date();
+        }
+    }
+
+    unlike(userId: string) {
+        this.likedBy = this.likedBy.filter(user => user.userId !== userId);
+        this.updatedAt = new Date();
+    }
+
+    @ToDbModel
+    static toDbModel(post: SocialPost) {
+        return {
+            tags: post.tags,
+            createdAt: post.createdAt.toISOString(),
+            updatedAt: post.updatedAt.toISOString()
+        };
+    }
+
+    @FromDbModel
+    static fromDbModel(item: { tags?: string[]; createdAt?: string; updatedAt?: string }) {
+        return {
+            tags: item.tags ?? [],
+            createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+            updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date()
+        };
+    }
+}
+
 
 
 
@@ -260,9 +427,9 @@ BaseEntity.configure(
 // In a relational DB you'd insert 3 tables and manage FK constraints.
 // In raw DynamoDB you'd manually write every item and manage composite keys.
 //
-// Solution: Just set the properties and call insert() once.
-// The ORM cascades: saves User + Products first, then the Order,
-// then writes the link records that tie them together.
+// Solution: Pass cascadeSave=true to insert(). The ORM walks the object graph,
+// saves User + Products first, then the Order, then writes the link records
+// that tie them together.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function placeOrder() {
@@ -272,7 +439,7 @@ async function placeOrder() {
     order.addItem(new Product('p-laptop', 'Laptop', 999.99));
     order.addItem(new Product('p-mouse',  'Mouse',   29.99));
 
-    await order.insert(); // one call — cascades to user, products, links
+    await order.insert(true); // cascadeSave=true: saves user, products, then order, then link records
 
     console.log('Order saved. Total:', order.total); // 1029.98
 }
@@ -452,9 +619,10 @@ async function updateCustomerEmail(userId: string, newEmail: string) {
 // Keyboard in their existing order. In raw DynamoDB you'd delete the old
 // __link record, write a new one, update backlinks on both products — 4+ ops.
 //
-// Solution: Mutate the items array and call insert() again. The ORM diffs
+// Solution: Mutate the items array and call insert(true) again. The ORM diffs
 // the existing link records, removes the stale ones (and their backlinks on
-// the old product), and writes fresh ones for the new product.
+// the old product), and writes fresh ones for the new product. cascadeSave=true
+// ensures the new product is saved before linking.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function replaceOrderItem(orderId: string) {
@@ -464,17 +632,15 @@ async function replaceOrderItem(orderId: string) {
     order!.removeItem('p-mouse');
     order!.addItem(new Product('p-keyboard', 'Keyboard', 49.99));
 
-    // insert() deletes old link+backlink for p-mouse, writes new ones for p-keyboard
-    await order!.insert();
+    // insert(true) deletes old link+backlink for p-mouse, writes new ones for p-keyboard
+    await order!.insert(true);
     console.log('Order updated. New total:', order!.total);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCENARIO 9 — Order cancellation: Delete an order and clean up all links
 //
-// Problem: A cancelled order must be removed cleanly. You have to remove the
-// order item, every __link record it owns, and the corresponding __backlink
-// records on the User and Product tables — easy to miss one and create ghosts.
+// Problem: A cancelled order must be removed cleanly.
 //
 // Solution: order.delete() handles all of it automatically:
 //   1. Deletes every __link record owned by the order (→ user, → products)
@@ -503,7 +669,8 @@ async function cancelOrder(orderId: string) {
 // __backlink records are pure overhead (extra writes, extra storage, extra reads).
 //
 // Solution: @LinkObject(Product, { inline: true }) embeds the linked
-// product's key directly on the Receipt item. loadLinks() resolves with
+// product's key directly on the Receipt item cascadeSave=true ensures the
+// product exists before the receipt is saved.. loadLinks() resolves with
 // a single GetItem — no prefix query needed.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -530,7 +697,7 @@ async function inlineLinksExample() {
     const receipt = new Receipt('r-1');
     receipt.product = product;
 
-    await receipt.insert(); // writes __productID: { hKey: 'PRODUCT', sKey: 'p-3' } onto Receipt
+    await receipt.insert(true); // cascadeSave=true: saves product first, then writes __productID inline
 
     const loaded = await Receipt.get('r-1');
     await loaded!.loadLinks(); // resolves with one GetItem — no prefix query
@@ -613,4 +780,127 @@ async function dateRoundTripExample() {
     console.log(loaded!.createdAt instanceof Date);       // true
     console.log(loaded!.createdAt.getFullYear());         // 2024
     console.log(loaded!.createdAt.toLocaleDateString());  // locale-formatted date
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENARIO 14 — Social media: Publish a post with comments and likes
+//
+// Problem: A post detail page needs the author, a comment thread, and likes.
+// In raw DynamoDB you'd coordinate m and use insert(true). cascadeSave=true
+// tells the ORM to save all linked entities: users, comments (and their authors),
+// then the post itself, then all link/backlink records
+// Solution: Model the graph directly. insert() saves the post, its author,
+// every comment, each comment author, and the users who liked the post.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function publishSocialPost() {
+    const alice = new SocialUser('user-alice', 'alice', 'Alice Kim', 'Frontend engineer sharing product notes.');
+    const bob = new SocialUser('user-bob', 'bob', 'Bob Singh', 'Backend builder and coffee snob.');
+    const carol = new SocialUser('user-carol', 'carol', 'Carol Diaz', 'Community lead and release wrangler.');
+
+    const post = new SocialPost(
+        'post-1001',
+        'We just rolled out a feed redesign with faster image loading and better ranking.',
+        alice,
+        ['release', 'feed', 'performance']
+    );
+
+    const firstComment = new SocialComment('comment-9001', 'The new timeline feels noticeably faster on mobile.', bob);
+    firstComment.like(alice);
+
+    const secondComment = new SocialComment('comment-9002', 'Please add muted keywords next.', carol);
+
+    post.addComment(firstComment);
+    post.addComment(secondComment);
+    post.like(bob);
+    post.like(carol);
+
+    await post.insert(true); // cascadeSave=true: saves users, comments, post, then all link records
+
+    console.log(`Post saved with ${post.comments.length} comments and ${post.likedBy.length} likes.`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENARIO 15 — Thread view: Load a post, its comments, and all participating users
+//
+// Problem: A thread screen has nested relations: the post author, comment
+// authors, and the users who liked each object.
+//
+// Solution: loadLinks() hydrates one level at a time. Load the post, then fan
+// out to each comment in parallel for a fully typed thread object graph.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function renderSocialThread(postId: string) {
+    const post = await SocialPost.get(postId);
+    if (!post) throw new Error('Post not found');
+
+    await post.loadLinks();
+    await Promise.all(post.comments.map(comment => comment.loadLinks()));
+
+    console.log(`${post.author?.profileLabel}: ${post.body}`);
+    console.log('Post likes:', post.likedBy.map(user => `@${user.handle}`).join(', '));
+
+    for (const comment of post.comments) {
+        const likedBy = comment.likedBy.map(user => `@${user.handle}`).join(', ');
+        console.log(`- ${comment.author?.profileLabel}: ${comment.body}`);
+        console.log(`  Likes: ${likedBy || 'none'}`);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENARIO 16 — Profile page: Find every post a user liked
+//              (reverse traversal via backlinks)
+//
+// Problem: A profile screen wants a "posts you liked" tab. Without backlinks,
+// you'd scan all posts and inspect every likedBy link in application code.
+//
+// Solution: Every SocialPost.likedBy link writes a __backlink record onto the
+// linked SocialUser, so you can query from the user out to posts directly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function findPostsLikedByUser(userId: string): Promise<SocialPost[]> {
+    const userMeta = (SocialUser as any).__entityMetadata__;
+    const prefix = `${encodeLinkSegment('SOCIAL_USER')}#${encodeLinkSegment(userId)}#`;
+
+    const backlinks = await paginatedQuery({
+        TableName: userMeta.tableName,
+        KeyConditionExpression: '#pk = :pkval AND begins_with(#sk, :skprefix)',
+        ExpressionAttributeNames: { '#pk': userMeta.hashKeyName, '#sk': userMeta.sortKeyName },
+        ExpressionAttributeValues: { ':pkval': '__backlink', ':skprefix': prefix },
+    });
+
+    const likedPostBacklinks = backlinks.filter(
+        (backlink: any) => backlink.parentHashKey === 'POST' && backlink.propertyKey === 'likedBy'
+    );
+
+    const posts = await Promise.all(
+        likedPostBacklinks.map(async (backlink: any) => {
+            const result = await getDocClient().send(new GetCommand({
+                TableName: backlink.parentTableName,
+                Key: {
+                    [backlink.parentHashKeyName]: backlink.parentHashKey,
+                    [backlink.parentSortKeyName]: backlink.parentSortKey,
+                },
+            }));
+
+            if (!result.Item) {
+                return null;
+            }
+
+            const instance = new SocialPost();
+            Object.assign(instance, result.Item, SocialPost.fromDbModel(result.Item));
+            return instance;
+        })
+    );
+
+    return posts.filter((post): post is SocialPost => post !== null);
+}
+
+async function socialProfileLikesTab(userId: string) {
+    const likedPosts = await findPostsLikedByUser(userId);
+    await Promise.all(likedPosts.map(post => post.loadLinks()));
+
+    for (const post of likedPosts) {
+        console.log(`Liked post → ${post.postId} by @${post.author?.handle}`);
+    }
 }

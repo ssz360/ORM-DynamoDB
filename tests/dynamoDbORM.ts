@@ -826,3 +826,95 @@ describe('dynamoDbORMteORM - Issue 4: Stale __propertyID Cleanup', () => {
         expect(raw2.__childID).toBeUndefined();
     });
 });
+
+describe('dynamoDbORMteORM - Cascade Save (insert with cascadeSave parameter)', () => {
+    afterEach(async () => {
+        await cleanupTestData('PARENT_NONINLINE');
+        await cleanupTestData('PARENT_ARRAY');
+        await cleanupTestData('CHILD');
+        await cleanupTestData('__link');
+        await cleanupTestData('__backlink');
+    });
+
+    it('should cascade save linked object when cascadeSave=true', async () => {
+        const child = new TestChild(700, 'Cascade Child');
+        const parent = new TestParentWithNonInlineLink(50);
+        parent.child = child;
+
+        // Save parent with cascadeSave=true - should save child automatically
+        await parent.insert(true);
+
+        // Verify both parent and child were saved
+        const retrievedParent = await TestParentWithNonInlineLink.get('50');
+        const retrievedChild = await TestChild.get('700');
+        
+        expect(retrievedParent).toBeDefined();
+        expect(retrievedChild).toBeDefined();
+        expect(retrievedChild?.data).toBe('Cascade Child');
+
+        // Verify link was created
+        await retrievedParent?.loadLinks();
+        expect(retrievedParent?.child?.childId).toBe(700);
+    });
+
+    it('should cascade save array of linked objects when cascadeSave=true', async () => {
+        const children = [
+            new TestChild(710, 'Cascade 1'),
+            new TestChild(711, 'Cascade 2'),
+            new TestChild(712, 'Cascade 3')
+        ];
+        
+        const parent = new TestParentWithArray(51);
+        parent.children = children;
+
+        // Save parent with cascadeSave=true - should save all children automatically
+        await parent.insert(true);
+
+        // Verify parent and all children were saved
+        const retrievedParent = await TestParentWithArray.get('51');
+        expect(retrievedParent).toBeDefined();
+
+        for (const child of children) {
+            const retrievedChild = await TestChild.get(child.childId.toString());
+            expect(retrievedChild).toBeDefined();
+        }
+
+        // Verify links were created
+        await retrievedParent?.loadLinks();
+        expect(retrievedParent?.children).toHaveLength(3);
+        expect(retrievedParent?.children?.map(c => c.childId).sort()).toEqual([710, 711, 712]);
+    });
+
+    it('should NOT cascade save when cascadeSave=false (default)', async () => {
+        const child = new TestChild(720, 'No Cascade');
+        const parent = new TestParentWithNonInlineLink(52);
+        parent.child = child;
+
+        // Save parent with cascadeSave=false (default) - should NOT save child
+        await parent.insert(false);
+
+        // Verify parent was saved but child was not
+        const retrievedParent = await TestParentWithNonInlineLink.get('52');
+        const retrievedChild = await TestChild.get('720');
+        
+        expect(retrievedParent).toBeDefined();
+        expect(retrievedChild).toBeNull(); // Child should not exist
+    });
+
+    it('should NOT cascade save when cascadeSave omitted (default)', async () => {
+        const child = new TestChild(730, 'No Cascade Default');
+        const parent = new TestParentWithNonInlineLink(53);
+        parent.child = child;
+
+        // Save parent without parameter - should NOT save child
+        await parent.insert();
+
+        // Verify parent was saved but child was not
+        const retrievedParent = await TestParentWithNonInlineLink.get('53');
+        const retrievedChild = await TestChild.get('730');
+        
+        expect(retrievedParent).toBeDefined();
+        expect(retrievedChild).toBeNull(); // Child should not exist
+    });
+});
+
