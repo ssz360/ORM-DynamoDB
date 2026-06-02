@@ -5,7 +5,7 @@
 
 Lightweight TypeScript decorators for modeling DynamoDB items as classes.
 
-Project site: https://github.com/ssz360/ORM-DynamoDB
+Project site: https://ssz360.github.io/ORM-DynamoDB/
 
 ## ✨ Features
 
