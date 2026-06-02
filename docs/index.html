@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>orm-dynamodb — DynamoDB ORM for TypeScript</title>
+  <meta name="description" content="Lightweight TypeScript decorators for modeling DynamoDB items as classes." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f9f9f8;
+      --bg-code: #f4f4f3;
+      --border: #e4e4e2;
+      --border-strong: #d1d1ce;
+      --text: #0a0a09;
+      --text-muted: #6b6b68;
+      --text-subtle: #a1a19e;
+      --accent: #18181b;
+      --accent-fg: #ffffff;
+      --badge-bg: #f4f4f3;
+      --badge-text: #6b6b68;
+      --font: 'Geist', sans-serif;
+      --mono: 'Geist Mono', monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+
+      /* syntax */
+      --syn-kw: #7c3aed;
+      --syn-fn: #059669;
+      --syn-str: #d97706;
+      --syn-dec: #2563eb;
+      --syn-cm: #a1a19e;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0a0a09;
+        --bg-secondary: #111110;
+        --bg-code: #161614;
+        --border: #252523;
+        --border-strong: #333331;
+        --text: #ededec;
+        --text-muted: #a1a19e;
+        --text-subtle: #63635e;
+        --accent: #ededec;
+        --accent-fg: #0a0a09;
+        --badge-bg: #1c1c1a;
+        --badge-text: #a1a19e;
+        --syn-kw: #a78bfa;
+        --syn-fn: #34d399;
+        --syn-str: #fbbf24;
+        --syn-dec: #60a5fa;
+        --syn-cm: #63635e;
+      }
+    }
+
+    html { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    body { min-height: 100vh; }
+
+    /* Layout */
+    .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+    /* Nav */
+    nav { border-bottom: 1px solid var(--border); padding: 14px 0; }
+    nav .inner { max-width: 760px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; }
+    .nav-brand svg { width: 18px; height: 18px; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-link { font-size: 13px; color: var(--text-muted); text-decoration: none; padding: 5px 10px; border-radius: var(--radius); transition: color 0.15s, background 0.15s; }
+    .nav-link:hover { color: var(--text); background: var(--bg-secondary); }
+    .nav-link.ghost { border: 1px solid var(--border); color: var(--text); font-weight: 500; padding: 5px 12px; }
+    .nav-link.ghost:hover { background: var(--bg-secondary); }
+
+    /* Hero */
+    .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--border); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--badge-text); background: var(--badge-bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; margin-bottom: 20px; }
+    .badge svg { width: 12px; height: 12px; }
+    h1 { font-size: 42px; font-weight: 600; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 16px; max-width: 580px; }
+    .lede { font-size: 17px; color: var(--text-muted); line-height: 1.7; max-width: 520px; margin-bottom: 28px; }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 36px; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; transition: opacity 0.15s, background 0.15s; border: none; font-family: var(--font); }
+    .btn-primary { background: var(--accent); color: var(--accent-fg); }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
+    .btn-outline:hover { background: var(--bg-secondary); }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    /* Install strip */
+    .install-strip { display: flex; align-items: center; gap: 12px; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 16px; max-width: 380px; }
+    .install-strip code { font-family: var(--mono); font-size: 13.5px; color: var(--text); flex: 1; }
+    .copy-btn { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); cursor: pointer; font-family: var(--font); transition: background 0.15s, color 0.15s; white-space: nowrap; }
+    .copy-btn:hover { color: var(--text); }
+    .copy-btn svg { width: 13px; height: 13px; }
+
+    /* Section */
+    .section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+    .section-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-subtle); margin-bottom: 8px; }
+    .section-title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 10px; }
+    .section-body { font-size: 15px; color: var(--text-muted); line-height: 1.7; max-width: 560px; }
+
+    /* Features grid */
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 32px; }
+    .feature { background: var(--bg); padding: 20px 20px 22px; }
+    .feature-icon { width: 32px; height: 32px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+    .feature-icon svg { width: 16px; height: 16px; color: var(--text-muted); }
+    .feature h3 { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+    .feature p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .feature p code { font-family: var(--mono); font-size: 12px; background: var(--bg-code); padding: 1px 5px; border-radius: 4px; color: var(--text); }
+
+    /* Code block */
+    .code-wrap { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 28px; }
+    .code-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+    .code-filename { font-family: var(--mono); font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .code-filename svg { width: 13px; height: 13px; }
+    .code-wrap pre { padding: 20px; overflow-x: auto; }
+    .code-wrap code { font-family: var(--mono); font-size: 13px; line-height: 1.75; color: var(--text); white-space: pre; display: block; }
+    .kw { color: var(--syn-kw); }
+    .fn { color: var(--syn-fn); }
+    .str { color: var(--syn-str); }
+    .dec { color: var(--syn-dec); }
+    .cm { color: var(--syn-cm); font-style: italic; }
+
+    /* Config cards */
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+    .config-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
+    .config-card h3 { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+    .config-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    /* Links */
+    .links-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 24px; }
+    .link-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); text-decoration: none; color: var(--text); transition: background 0.15s, border-color 0.15s; }
+    .link-card:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
+    .link-card-icon { width: 34px; height: 34px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .link-card-icon svg { width: 16px; height: 16px; color: var(--text-muted); }
+    .link-card-body { min-width: 0; }
+    .link-card-title { font-size: 14px; font-weight: 500; }
+    .link-card-desc { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .link-card-arrow { margin-left: auto; color: var(--text-subtle); flex-shrink: 0; }
+    .link-card-arrow svg { width: 14px; height: 14px; }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 28px 0; }
+    footer .inner { max-width: 760px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
+    footer p { font-size: 13px; color: var(--text-subtle); }
+    footer a { font-size: 13px; color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 30px; }
+      .features { grid-template-columns: 1fr; }
+      .config-grid { grid-template-columns: 1fr; }
+      .links-grid { grid-template-columns: 1fr; }
+      .nav-links .nav-link:not(.ghost) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="inner">
+      <a class="nav-brand" href="#">
+        <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="1" y="1" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5 9h8M9 5v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        orm-dynamodb
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="https://github.com/ssz360/ORM-DynamoDB/blob/main/examples.ts">Examples</a>
+        <a class="nav-link ghost" href="https://www.npmjs.com/package/orm-dynamodb">
+          <svg viewBox="0 0 15 15" fill="none" style="width:13px;height:13px;display:inline;vertical-align:-2px;margin-right:5px" aria-hidden="true"><path d="M1 1h13v10H7.5V4.5h-2V11H1V1z" stroke="currentColor" stroke-width="1.2"/></svg>
+          npm
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+
+      <!-- Hero -->
+      <section class="hero">
+        <div class="badge">
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          DynamoDB ORM for TypeScript
+        </div>
+        <h1>Model DynamoDB items as plain classes.</h1>
+        <p class="lede">Decorator-first mapping for single-table designs. Typed entities, relationship loading, and CRUD primitives — without a heavy framework.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://www.npmjs.com/package/orm-dynamodb">
+            <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M1 1h13v10H7.5V4.5h-2V11H1V1z" stroke="currentColor" stroke-width="1.3"/></svg>
+            View on npm
+          </a>
+          <a class="btn btn-outline" href="https://github.com/ssz360/ORM-DynamoDB">
+            <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M7.5 1C3.91 1 1 3.91 1 7.5c0 2.87 1.86 5.3 4.44 6.16.32.06.44-.14.44-.31v-1.09c-1.8.39-2.18-.87-2.18-.87-.3-.75-.72-.95-.72-.95-.59-.4.04-.4.04-.4.65.05 1 .67 1 .67.58 1 1.53.71 1.9.54.06-.42.23-.71.41-.87-1.44-.16-2.95-.72-2.95-3.2 0-.71.25-1.28.67-1.74-.07-.16-.29-.82.06-1.71 0 0 .55-.17 1.8.67A6.26 6.26 0 017.5 4.9c.56 0 1.12.07 1.64.21 1.25-.84 1.8-.67 1.8-.67.35.89.13 1.55.06 1.71.42.46.67 1.03.67 1.74 0 2.49-1.52 3.04-2.97 3.2.23.2.44.6.44 1.21v1.79c0 .17.11.38.44.31A6.507 6.507 0 0014 7.5C14 3.91 11.09 1 7.5 1z" fill="currentColor"/></svg>
+            Source
+          </a>
+        </div>
+        <div class="install-strip">
+          <code>npm install orm-dynamodb</code>
+          <button class="copy-btn" onclick="copyText('npm install orm-dynamodb', this)">
+            <svg id="copy-icon" viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M5 2H1v12h9V9m-5-7h9v9H5V2z" stroke="currentColor" stroke-width="1.2"/></svg>
+            Copy
+          </button>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="section">
+        <p class="section-eyebrow">Features</p>
+        <h2 class="section-title">Everything you need, nothing you don't.</h2>
+        <p class="section-body">Keep DynamoDB access close to your domain model. Entities declare keys, transformations, and links in one place, while BaseEntity handles the repetitive SDK calls.</p>
+
+        <div class="features">
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Type-safe decorators</h3>
+            <p>Entity and key decorators with full TypeScript inference on every attribute.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M10 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Linked objects</h3>
+            <p>Lazy-load related entities with <code>@LinkObject</code> and <code>@LinkArray</code>.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v4l3 3M14 8A6 6 0 112 8a6 6 0 0112 0z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Explicit timestamps</h3>
+            <p>Map <code>createdAt</code> and <code>updatedAt</code> yourself with <code>@ToDbModel</code> when you need them.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Serialization hooks</h3>
+            <p>Custom <code>@ToDbModel</code> and <code>@FromDbModel</code> for type coercions like <code>Date</code>.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 8a6 6 0 1112 0A6 6 0 012 8zm6-3v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Query helpers</h3>
+            <p>Built-in patterns for begins-with, between, and other sort key queries.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2L2 5v4c0 3 2.5 5 6 6 3.5-1 6-3 6-6V5L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>AWS SDK v3</h3>
+            <p>Explicit client config — bring your own <code>DynamoDBClient</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick start -->
+      <section class="section">
+        <p class="section-eyebrow">Quick start</p>
+        <h2 class="section-title">Configure once, then work with entities.</h2>
+        <p class="section-body">Pass a <code style="font-family:var(--mono);font-size:13px;background:var(--bg-code);padding:1px 5px;border-radius:4px">DynamoDBClient</code> to <code style="font-family:var(--mono);font-size:13px;background:var(--bg-code);padding:1px 5px;border-radius:4px">BaseEntity.configure()</code>, decorate your classes, and start reading and writing items.</p>
+
+        <div class="code-wrap">
+          <div class="code-bar">
+            <div class="code-filename">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M3 1h7l3 3v10H3V1zm7 0v3h3" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+              entity.ts
+            </div>
+            <button class="copy-btn" onclick="copyCode(this)">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M5 2H1v12h9V9m-5-7h9v9H5V2z" stroke="currentColor" stroke-width="1.2"/></svg>
+              Copy
+            </button>
+          </div>
+          <pre><code id="quickstart-code"><span class="kw">import</span> { DynamoDBClient } <span class="kw">from</span> <span class="str">'@aws-sdk/client-dynamodb'</span>;
+<span class="kw">import</span> {
+  BaseEntity, Entity, FromDbModel,
+  HashKeyValue, LinkObject, SortKeyValue, ToDbModel,
+} <span class="kw">from</span> <span class="str">'orm-dynamodb'</span>;
+
+<span class="cm">// Configure once at app startup</span>
+BaseEntity.<span class="fn">configure</span>(<span class="kw">new</span> <span class="fn">DynamoDBClient</span>({ region: <span class="str">'us-east-1'</span> }));
+
+<span class="dec">@Entity</span>(<span class="str">'content'</span>, <span class="str">'pk'</span>, <span class="str">'sk'</span>)
+<span class="kw">class</span> <span class="fn">Author</span> <span class="kw">extends</span> BaseEntity {
+  <span class="dec">@HashKeyValue</span>
+  <span class="kw">get</span> <span class="fn">hashKey</span>() { <span class="kw">return</span> <span class="str">'AUTHOR'</span>; }
+
+  <span class="dec">@SortKeyValue</span>
+  <span class="kw">get</span> <span class="fn">sortKey</span>() { <span class="kw">return</span> <span class="kw">this</span>.authorId; }
+
+  authorId: <span class="kw">string</span>;
+  displayName: <span class="kw">string</span>;
+
+  <span class="kw">constructor</span>(authorId = <span class="str">''</span>, displayName = <span class="str">''</span>) {
+    <span class="kw">super</span>();
+    <span class="kw">this</span>.authorId = authorId;
+    <span class="kw">this</span>.displayName = displayName;
+  }
+}
+
+<span class="dec">@Entity</span>(<span class="str">'content'</span>, <span class="str">'pk'</span>, <span class="str">'sk'</span>)
+<span class="kw">class</span> <span class="fn">Post</span> <span class="kw">extends</span> BaseEntity {
+  <span class="dec">@HashKeyValue</span>
+  <span class="kw">get</span> <span class="fn">hashKey</span>() { <span class="kw">return</span> <span class="str">'POST'</span>; }
+
+  <span class="dec">@SortKeyValue</span>
+  <span class="kw">get</span> <span class="fn">sortKey</span>() { <span class="kw">return</span> <span class="kw">this</span>.slug; }
+
+  slug: <span class="kw">string</span>;
+  title: <span class="kw">string</span>;
+  publishedAt: Date | <span class="kw">null</span>;
+
+  <span class="dec">@LinkObject</span>(Author)
+  author: Author | <span class="kw">undefined</span>;
+
+  <span class="kw">constructor</span>(slug = <span class="str">''</span>, title = <span class="str">''</span>, publishedAt: Date | <span class="kw">null</span> = <span class="kw">null</span>) {
+    <span class="kw">super</span>();
+    <span class="kw">this</span>.slug = slug;
+    <span class="kw">this</span>.title = title;
+    <span class="kw">this</span>.publishedAt = publishedAt;
+  }
+
+  <span class="dec">@ToDbModel</span>
+  <span class="kw">static</span> <span class="fn">toDbModel</span>(post: Post) {
+    <span class="kw">return</span> {
+      publishedAt: post.publishedAt ? post.publishedAt.<span class="fn">toISOString</span>() : <span class="kw">null</span>,
+    };
+  }
+
+  <span class="dec">@FromDbModel</span>
+  <span class="kw">static</span> <span class="fn">fromDbModel</span>(item: { publishedAt?: <span class="kw">string</span> | <span class="kw">null</span> }) {
+    <span class="kw">return</span> {
+      publishedAt: item.publishedAt ? <span class="kw">new</span> <span class="fn">Date</span>(item.publishedAt) : <span class="kw">null</span>,
+    };
+  }
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- Install / Setup -->
+      <section class="section">
+        <p class="section-eyebrow">Setup</p>
+        <h2 class="section-title">Two tsconfig flags required.</h2>
+        <p class="section-body">Enable these in your <code style="font-family:var(--mono);font-size:13px;background:var(--bg-code);padding:1px 5px;border-radius:4px">tsconfig.json</code> before using decorators.</p>
+
+        <div class="config-grid">
+          <div class="config-card">
+            <h3>experimentalDecorators</h3>
+            <p>Enables the <code style="font-family:var(--mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px">@Decorator</code> syntax used by all entity and key annotations.</p>
+          </div>
+          <div class="config-card">
+            <h3>emitDecoratorMetadata</h3>
+            <p>Required for runtime type reflection, used when resolving linked object types.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Links -->
+      <section class="section">
+        <p class="section-eyebrow">Resources</p>
+        <h2 class="section-title">Useful links.</h2>
+
+        <div class="links-grid">
+          <a class="link-card" href="https://github.com/ssz360/ORM-DynamoDB#readme">
+            <div class="link-card-icon">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M2 2h11v11H2V2zm2 2v7h7V4H4zm1 1h5v1H5V5zm0 2h5v1H5V7zm0 2h3v1H5V9z" fill="currentColor"/></svg>
+            </div>
+            <div class="link-card-body">
+              <div class="link-card-title">README</div>
+              <div class="link-card-desc">Full documentation and API reference</div>
+            </div>
+            <div class="link-card-arrow">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M3 7.5h9M9 4l3.5 3.5L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+          </a>
+          <a class="link-card" href="https://github.com/ssz360/ORM-DynamoDB/blob/main/examples.ts">
+            <div class="link-card-icon">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M5 4.5l-3 3 3 3M10 4.5l3 3-3 3M8 2l-2 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="link-card-body">
+              <div class="link-card-title">examples.ts</div>
+              <div class="link-card-desc">Annotated code examples for common patterns</div>
+            </div>
+            <div class="link-card-arrow">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M3 7.5h9M9 4l3.5 3.5L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+          </a>
+          <a class="link-card" href="https://github.com/ssz360/ORM-DynamoDB/blob/main/TEST_GUIDE.md">
+            <div class="link-card-icon">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M5 2h5l3 4-3 1 1 6H4l1-6-3-1 3-4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="link-card-body">
+              <div class="link-card-title">TEST_GUIDE.md</div>
+              <div class="link-card-desc">How to run and write tests for your entities</div>
+            </div>
+            <div class="link-card-arrow">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M3 7.5h9M9 4l3.5 3.5L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+          </a>
+          <a class="link-card" href="https://www.npmjs.com/package/orm-dynamodb">
+            <div class="link-card-icon">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M1 1h13v10H7.5V4.5h-2V11H1V1z" stroke="currentColor" stroke-width="1.2"/></svg>
+            </div>
+            <div class="link-card-body">
+              <div class="link-card-title">npm package</div>
+              <div class="link-card-desc">Package versions, install stats, and changelog</div>
+            </div>
+            <div class="link-card-arrow">
+              <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M3 7.5h9M9 4l3.5 3.5L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+          </a>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="inner">
+      <p>orm-dynamodb — MIT License</p>
+      <a href="https://github.com/ssz360/ORM-DynamoDB">github.com/ssz360/ORM-DynamoDB</a>
+    </div>
+  </footer>
+
+  <script>
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 15 15" fill="none" style="width:13px;height:13px"><path d="M2 8l4 4 7-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+      });
+    }
+
+    function copyCode(btn) {
+      const code = document.getElementById('quickstart-code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 15 15" fill="none" style="width:13px;height:13px"><path d="M2 8l4 4 7-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+      });
+    }
+  </script>
+
+</body>
+</html>

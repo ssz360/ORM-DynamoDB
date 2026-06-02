@@ -5,12 +5,13 @@
 
 Lightweight TypeScript decorators for modeling DynamoDB items as classes.
 
+Project site: https://github.com/ssz360/ORM-DynamoDB
+
 ## ✨ Features
 
 - 🎯 **Type-safe decorators** for DynamoDB entities with full TypeScript support
 - 🔗 **Entity relationships** with `@LinkObject` and `@LinkArray` decorators and automatic link loading
 - 🔄 **Custom serialization** with `@ToDbModel` and `@FromDbModel` transformers
-- ⏰ **Automatic timestamps** for `createdAt` and `updatedAt`
 - 🛠️ **Intuitive API** with `insert()`, `update()`, `delete()`, `get()`, and `query()` methods
 - 🚀 **Zero configuration** - works out of the box with AWS SDK v3
 - 📦 **Tiny footprint** - lightweight with minimal dependencies
@@ -172,11 +173,22 @@ const recentOrders = await Order.queryGreaterThan('2024-01-01', {
 ### Features
 
 - ✅ Explicit DynamoDB client configuration via `BaseEntity.configure(...)` or `@Entity(..., dbClient)`
-- ✅ Automatic `createdAt` and `updatedAt` timestamp management
 - ✅ Type-safe entity relationships with `@LinkObject` and `@LinkArray` decorators
 - ✅ Lazy loading of linked entities with `loadLinks()`
 - ✅ Custom transformation between domain models and DynamoDB items
 - ✅ Inline and non-inline link storage options
+
+## 📋 Changelog
+
+### 1.2.2
+
+- Added optional cascade saving with `insert(true)` so linked entities can be persisted before the parent entity.
+
+### 1.1.2
+
+- Changed query helper methods such as `queryAll`, `queryBetween`, and `queryGreaterThan` to accept an options object instead of only a `limit` argument.
+- Added support for helper options like `scanIndexForward` while preserving the existing sort key helper APIs.
+- Updated the README examples to document the new query helper signature.
 
 ## 🛠️ Development
 
@@ -222,3 +234,10 @@ See [examples.ts](./examples.ts) for examples.
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+
+To publish it:
+
+1. In GitHub, open **Settings > Pages**.
+2. Set **Source** to **GitHub Actions**.
+3. Push to `main` or run the **Deploy GitHub Pages** workflow manually.

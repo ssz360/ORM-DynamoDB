@@ -249,6 +249,7 @@ describe('dynamoDbORMteORM - Basic CRUD Operations', () => {
 
         const retrieved = await TestItem.get('2');
         expect(retrieved?.name).toBe('Updated');
+        expect((retrieved as any)?.updatedAt).toBeUndefined();
     });
 
     it('should delete an item', async () => {

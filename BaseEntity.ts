@@ -247,10 +247,6 @@ export class BaseEntity {
             index++;
         }
 
-        updateExpressions.push(`#updatedAt = :updatedAt`);
-        expressionAttributeNames['#updatedAt'] = 'updatedAt';
-        expressionAttributeValues[':updatedAt'] = new Date().toISOString();
-
         await getDocClient().send(new UpdateCommand({
             TableName: metadata.tableName,
             Key: key,
