@@ -5,108 +5,7 @@ import { BaseEntity, Entity, FromDbModel, HashKeyValue, LinkArray, LinkObject, S
 import { paginatedQuery, encodeLinkSegment, getDocClient } from './client';
 
 
-
-@Entity('test', 'hKey', 'sKey') // or @Entity('test', 'hKey', 'sKey', new DynamoDBClient({...}))
-class Wheel extends BaseEntity {
-    @HashKeyValue
-    get hashKey() { return `WHEEL`; }
-    @SortKeyValue
-    get sortKey() { return `${this.wheelID}`; }
-
-    wheelID: number;
-
-    constructor(wheelID: number = 0) {
-        super();
-        this.wheelID = wheelID;
-    }
-}
-
-@Entity('test', 'hKey', 'sKey')
-class Engine extends BaseEntity {
-    @HashKeyValue
-    get hashKey() { return "Engine"; }
-    @SortKeyValue
-    get sortKey() { return this.engineID.toString(); }
-
-    engineID: number;
-    capacity: number;
-    numberOfCylinders: number;
-
-    constructor(engineID: number = 0, capacity: number = 0, numberOfCylinders = 0) {
-        super();
-        this.engineID = engineID;
-        this.capacity = capacity;
-        this.numberOfCylinders = numberOfCylinders;
-    }
-
-}
-
-@Entity('test', 'hKey', 'sKey')
-class Car extends BaseEntity {
-    @HashKeyValue
-    get hashKey() { return 'Car'; }
-    @SortKeyValue
-    get sortKey() { return this.carID.toString(); }
-
-    carID: number;
-    make: string;
-    model: string;
-    year: number;
-    @LinkArray(Wheel)
-    wheels: Wheel[] | undefined;
-    @LinkObject(Engine)
-    engine: Engine | undefined;
-    createdAt: Date | undefined;
-    updatedAt: Date | undefined;
-
-    constructor(carID: number = 0, make: string = '', model: string = '', year: number = 0) {
-        super();
-        this.carID = carID;
-        this.make = make;
-        this.model = model;
-        this.year = year;
-    }
-
-    @ToDbModel
-    static toDBModelMapper(instance: Car) {
-        // Custom transformation before saving to DB
-        return {
-            ...instance,
-            updatedAt: new Date().toISOString(),
-            createdAt: instance.createdAt ? instance.createdAt.toISOString() : new Date().toISOString(),
-        };
-    }
-
-    @FromDbModel
-    static fromDBModelMapper(dbModel: any): Car {
-        // Custom transformation after loading from DB
-        return {
-            ...dbModel,
-            updatedAt: new Date(dbModel.updatedAt),
-            createdAt: new Date(dbModel.createdAt),
-        };
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey') // or @Entity('test_table', '__hKey', '__sKey', new DynamoDBClient({...}))
 export class User extends BaseEntity {
     @HashKeyValue
     get hashKey() {
@@ -136,7 +35,7 @@ export class User extends BaseEntity {
 /**
  * PRODUCT
  */
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey')
 export class Product extends BaseEntity {
     @HashKeyValue
     get hashKey() {
@@ -167,7 +66,7 @@ export class Product extends BaseEntity {
 /**
  * ORDER
  */
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey')
 export class Order extends BaseEntity {
     @HashKeyValue
     get hashKey() {
@@ -231,7 +130,7 @@ export class Order extends BaseEntity {
 /**
  * SOCIAL USER
  */
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey')
 class SocialUser extends BaseEntity {
     @HashKeyValue
     get hashKey() {
@@ -264,7 +163,7 @@ class SocialUser extends BaseEntity {
 /**
  * SOCIAL COMMENT
  */
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey')
 class SocialComment extends BaseEntity {
     @HashKeyValue
     get hashKey() {
@@ -319,7 +218,7 @@ class SocialComment extends BaseEntity {
 /**
  * SOCIAL POST
  */
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey')
 class SocialPost extends BaseEntity {
     @HashKeyValue
     get hashKey() {
@@ -674,7 +573,7 @@ async function cancelOrder(orderId: string) {
 // a single GetItem — no prefix query needed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-@Entity('test', 'hKey', 'sKey')
+@Entity('test_table', '__hKey', '__sKey')
 class Receipt extends BaseEntity {
     @HashKeyValue get hashKey() { return 'RECEIPT'; }
     @SortKeyValue get sortKey() { return this.receiptId; }

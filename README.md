@@ -229,7 +229,8 @@ Apache-2.0
 
 ## 📖 Examples
 
-See [examples.ts](./examples.ts) for examples.
+See [examples_simple.ts](./examples_simple.ts) for examples.
+See [examples_advanced.ts](./examples_advanced.ts) for advanced examples.
 
 ## 🤝 Contributing
 
