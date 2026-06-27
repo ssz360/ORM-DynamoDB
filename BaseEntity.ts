@@ -101,14 +101,14 @@ export class BaseEntity {
         return this;
     }
 
-    async insert(cascadeSave: boolean = false) {
+    protected async saveItem(source: any = this, cascadeSave: boolean = false) {
         const metadata = this.getMetadata();
 
         // Save linked entities first (cascade save) only if cascadeSave is true
         if (cascadeSave) {
             const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
             for (const link of links) {
-                const value = (this as any)[link.propertyKey];
+                const value = source[link.propertyKey];
                 if (value !== undefined && value !== null) {
                     if (Array.isArray(value)) {
                         // Save all linked entities in parallel
@@ -121,7 +121,7 @@ export class BaseEntity {
             }
         }
 
-        const item = this.toItem();
+        const item = this.toItem(source);
 
         await getDocClient().send(new PutCommand({
             TableName: metadata.tableName,
@@ -147,12 +147,12 @@ export class BaseEntity {
         }
 
         if (metadata.sortKeyName && nonInlineLinks.length > 0) {
-            const parentKey = this.getKey();
+            const parentKey = this.getKey(source);
             const parentHKVal = String(parentKey[metadata.hashKeyName]);
             const parentSKVal = String(parentKey[metadata.sortKeyName]);
 
             for (const link of nonInlineLinks) {
-                const value = (this as any)[link.propertyKey];
+                const value = source[link.propertyKey];
 
                 // Delete all existing link records for this property before writing new ones.
                 // Runs even when value is null/undefined so clearing a link removes stale records.
@@ -239,6 +239,11 @@ export class BaseEntity {
         return this;
     }
 
+    async insert(cascadeSave: boolean = false) {
+        await this.saveItem(this, cascadeSave);
+        return this;
+    }
+
     async update(attributes: Partial<this>) {
         const metadata = this.getMetadata();
         const key = this.getKey();
@@ -246,10 +251,7 @@ export class BaseEntity {
         const toDbModelMapper = (this.constructor as any)[TO_DB_MODEL_METADATA];
         if (toDbModelMapper) {
             const snapshot = Object.assign(Object.create(Object.getPrototypeOf(this)), this, attributes);
-            await getDocClient().send(new PutCommand({
-                TableName: metadata.tableName,
-                Item: this.toItem(snapshot)
-            }));
+            await this.saveItem(snapshot);
 
             Object.assign(this, attributes);
             return this;

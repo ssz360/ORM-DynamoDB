@@ -146,8 +146,8 @@ async function run() {
 
 ### Core Methods
 
-**Iinsert()` - Insert or update the entity (cascade saves linked entities)
-- `update(attributes)` - Partial update of the entity
+**`insert()`** - Insert or replace the entity (cascade saves linked entities when requested)
+- `update(attributes)` - Partial update for entities without `@ToDbModel`; full serialized save for entities with `@ToDbModel`
 - `delete()` - Remove the entity from DynamoDB
 - `loadLinks()` - Load all linked entities
 
