@@ -104,13 +104,15 @@ class Post extends BaseEntity {
   @ToDbModel
   static toDbModel(post: Post) {
     return {
+      ...post,
       publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null
     };
   }
 
   @FromDbModel
-  static fromDbModel(item: { publishedAt?: string | null }) {
+  static fromDbModel(item: any): Post {
     return {
+      ...item,
       publishedAt: item.publishedAt ? new Date(item.publishedAt) : null
     };
   }
@@ -139,8 +141,8 @@ async function run() {
 - **`@SortKeyValue`** - Defines the sort key value getter
 - **`@LinkObject(EntityClass, options?)`** - Creates a reference to a single entity (options: `{ inline?: boolean }`)
 - **`@LinkArray(EntityClass, options?)`** - Creates a reference to an array of entities (options: `{ inline?: boolean }`)
-- **`@ToDbModel`** - Custom serialization when writing to DynamoDB
-- **`@FromDbModel`** - Custom deserialization when reading from DynamoDB
+- **`@ToDbModel`** - Full serialization contract for writing to DynamoDB; return exactly the fields you want saved
+- **`@FromDbModel`** - Full deserialization contract for reading from DynamoDB; return exactly the fields you want on the entity
 
 ### Core Methods
 

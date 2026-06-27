@@ -115,13 +115,15 @@ export class Order extends BaseEntity {
     @ToDbModel
     static toDbModel(order: Order) {
         return {
+            ...order,
             createdAt: order.createdAt.toISOString()
         };
     }
 
     @FromDbModel
-    static fromDbModel(item: { createdAt?: string }) {
+    static fromDbModel(item: any): Order {
         return {
+            ...item,
             createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
         };
     }
@@ -203,13 +205,15 @@ class SocialComment extends BaseEntity {
     @ToDbModel
     static toDbModel(comment: SocialComment) {
         return {
+            ...comment,
             createdAt: comment.createdAt.toISOString()
         };
     }
 
     @FromDbModel
-    static fromDbModel(item: { createdAt?: string }) {
+    static fromDbModel(item: any): SocialComment {
         return {
+            ...item,
             createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
         };
     }
@@ -278,6 +282,7 @@ class SocialPost extends BaseEntity {
     @ToDbModel
     static toDbModel(post: SocialPost) {
         return {
+            ...post,
             tags: post.tags,
             createdAt: post.createdAt.toISOString(),
             updatedAt: post.updatedAt.toISOString()
@@ -285,8 +290,9 @@ class SocialPost extends BaseEntity {
     }
 
     @FromDbModel
-    static fromDbModel(item: { tags?: string[]; createdAt?: string; updatedAt?: string }) {
+    static fromDbModel(item: any): SocialPost {
         return {
+            ...item,
             tags: item.tags ?? [],
             createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
             updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date()

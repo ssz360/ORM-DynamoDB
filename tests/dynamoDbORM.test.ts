@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, DeleteCommand, GetCommand as DocumentGetCommand } from '@aws-sdk/lib-dynamodb';
 import { BaseEntity, Entity, HashKeyValue, SortKeyValue, LinkArray, LinkObject, ToDbModel, FromDbModel } from '../dynamoDbORM';
 import { tableName } from './setup';
 
@@ -153,6 +153,41 @@ class TestItemWithMappers extends BaseEntity {
             ...dbModel,
             updatedAt: new Date(dbModel.updatedAt),
             createdAt: new Date(dbModel.createdAt),
+        };
+    }
+}
+
+@Entity(tableName, 'hKey', 'sKey')
+class TestItemWithFullSerializer extends BaseEntity {
+    @HashKeyValue
+    get hashKey() { return 'FULL_MAPPER'; }
+    @SortKeyValue
+    get sortKey() { return this.id.toString(); }
+
+    id: number;
+    name: string;
+    secret: string;
+
+    constructor(id: number = 0, name: string = '', secret: string = '') {
+        super();
+        this.id = id;
+        this.name = name;
+        this.secret = secret;
+    }
+
+    @ToDbModel
+    static toDBModelMapper(instance: TestItemWithFullSerializer) {
+        return {
+            id: instance.id,
+            name: instance.name
+        };
+    }
+
+    @FromDbModel
+    static fromDBModelMapper(dbModel: any) {
+        return {
+            id: dbModel.id,
+            name: dbModel.name
         };
     }
 }
@@ -572,6 +607,7 @@ describe('dynamoDbORMteORM - Issue 7: Reserved Hash Key Value', () => {
 describe('dynamoDbORMteORM - ToDbModel and FromDbModel', () => {
     afterEach(async () => {
         await cleanupTestData('MAPPER');
+        await cleanupTestData('FULL_MAPPER');
     });
 
     it('should apply ToDbModel transformation on save', async () => {
@@ -591,6 +627,37 @@ describe('dynamoDbORMteORM - ToDbModel and FromDbModel', () => {
         const retrieved = await TestItemWithMappers.get('2');
         expect(retrieved?.createdAt).toBeInstanceOf(Date);
         expect(retrieved?.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should treat ToDbModel and FromDbModel as full model contracts', async () => {
+        const item = new TestItemWithFullSerializer(1, 'Visible', 'do-not-store');
+        await item.insert();
+
+        const client = new DynamoDBClient({
+            region: process.env.TEST_AWS_REGION || 'us-east-1',
+            credentials: {
+                accessKeyId: process.env.TEST_AWS_ACCESS_KEY_ID!,
+                secretAccessKey: process.env.TEST_AWS_SECRET_ACCESS_KEY!
+            }
+        });
+        const docClient = DynamoDBDocumentClient.from(client);
+
+        const raw = await docClient.send(new DocumentGetCommand({
+            TableName: tableName,
+            Key: {
+                hKey: 'FULL_MAPPER',
+                sKey: '1'
+            }
+        }));
+
+        expect(raw.Item?.name).toBe('Visible');
+        expect(raw.Item?.secret).toBeUndefined();
+
+        const retrieved = await TestItemWithFullSerializer.get('1');
+        expect(retrieved?.name).toBe('Visible');
+        expect((retrieved as any)?.secret).toBeUndefined();
+        expect((retrieved as any)?.hKey).toBeUndefined();
+        expect((retrieved as any)?.sKey).toBeUndefined();
     });
 });
 

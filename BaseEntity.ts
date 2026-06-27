@@ -18,38 +18,36 @@ export class BaseEntity {
         return (this.constructor as any).__entityMetadata__;
     }
 
-    protected getKey() {
+    protected getKey(source: any = this) {
         const metadata = this.getMetadata();
         const key: any = {};
 
         if (metadata.hashKeyGetter) {
-            key[metadata.hashKeyName] = (this as any)[metadata.hashKeyGetter];
+            key[metadata.hashKeyName] = source[metadata.hashKeyGetter];
         }
 
         if (metadata.sortKeyName && metadata.sortKeyGetter) {
-            key[metadata.sortKeyName] = (this as any)[metadata.sortKeyGetter];
+            key[metadata.sortKeyName] = source[metadata.sortKeyGetter];
         }
 
         return key;
     }
 
-    protected toItem() {
-        const item: any = { ...this };
-
+    protected toItem(source: any = this) {
         const metadata = this.getMetadata();
-        const key = this.getKey();
+        const key = this.getKey(source);
 
-        // Apply custom toDbModel mapper if defined
+        // @ToDbModel is a full serializer: when present, its return value is the
+        // complete user-controlled DB shape. Keys and link metadata are added by the ORM.
         const toDbModelMapper = (this.constructor as any)[TO_DB_MODEL_METADATA];
-        if (toDbModelMapper) {
-            const mappedData = (this.constructor as any)[toDbModelMapper](this);
-            Object.assign(item, mappedData);
-        }
+        const item: any = toDbModelMapper
+            ? { ...(this.constructor as any)[toDbModelMapper](source) }
+            : { ...source };
 
         // Handle linked entities
         const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
         for (const link of links) {
-            const value = (this as any)[link.propertyKey];
+            const value = source[link.propertyKey];
             const isInline = link.inline ?? false;
 
             if (isInline) {
@@ -88,9 +86,19 @@ export class BaseEntity {
         }
 
         return {
-            ...key,
-            ...item
+            ...item,
+            ...key
         };
+    }
+
+    protected fromItem<T extends BaseEntity>(this: T, item: any): T {
+        const fromDbModelMapper = (this.constructor as any)[FROM_DB_MODEL_METADATA];
+        const itemData = fromDbModelMapper
+            ? (this.constructor as any)[fromDbModelMapper](item)
+            : item;
+
+        Object.assign(this, itemData);
+        return this;
     }
 
     async insert(cascadeSave: boolean = false) {
@@ -235,6 +243,18 @@ export class BaseEntity {
         const metadata = this.getMetadata();
         const key = this.getKey();
 
+        const toDbModelMapper = (this.constructor as any)[TO_DB_MODEL_METADATA];
+        if (toDbModelMapper) {
+            const snapshot = Object.assign(Object.create(Object.getPrototypeOf(this)), this, attributes);
+            await getDocClient().send(new PutCommand({
+                TableName: metadata.tableName,
+                Item: this.toItem(snapshot)
+            }));
+
+            Object.assign(this, attributes);
+            return this;
+        }
+
         const updateExpressions: string[] = [];
         const expressionAttributeNames: any = {};
         const expressionAttributeValues: any = {};
@@ -345,16 +365,10 @@ export class BaseEntity {
 
             const EntityClass = link.entityClass;
             const entityMetadata = (EntityClass as any).__entityMetadata__;
-            const fromDbModelMapper = (EntityClass as any)[FROM_DB_MODEL_METADATA];
 
             const instantiate = (raw: any): BaseEntity => {
-                let itemData = raw;
-                if (fromDbModelMapper) {
-                    itemData = { ...raw, ...(EntityClass as any)[fromDbModelMapper](raw) };
-                }
                 const instance = new EntityClass();
-                Object.assign(instance, itemData);
-                return instance;
+                return instance.fromItem(raw);
             };
 
             const idField = `__${link.propertyKey}ID`;
@@ -461,16 +475,8 @@ export class BaseEntity {
             return null;
         }
 
-        const fromDbModelMapper = (this as any)[FROM_DB_MODEL_METADATA];
-        let itemData = result.Item;
-        if (fromDbModelMapper) {
-            const mappedData = (this as any)[fromDbModelMapper](result.Item);
-            itemData = { ...result.Item, ...mappedData };
-        }
-
         const instance = new this() as T;
-        Object.assign(instance, itemData);
-        return instance;
+        return instance.fromItem(result.Item);
     }
 
     static async query<T extends BaseEntity>(this: new (...args: any[]) => T, options?: QueryOptions): Promise<T[]> {
@@ -546,18 +552,9 @@ export class BaseEntity {
             return [];
         }
 
-        const fromDbModelMapper = (this as any)[FROM_DB_MODEL_METADATA];
-
         return result.Items.map(item => {
-            let itemData = item;
-            if (fromDbModelMapper) {
-                const mappedData = (this as any)[fromDbModelMapper](item);
-                itemData = { ...item, ...mappedData };
-            }
-
             const instance = new this() as T;
-            Object.assign(instance, itemData);
-            return instance;
+            return instance.fromItem(item);
         });
     }
 
