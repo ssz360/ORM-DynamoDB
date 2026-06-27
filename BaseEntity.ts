@@ -247,10 +247,23 @@ export class BaseEntity {
     async update(attributes: Partial<this>) {
         const metadata = this.getMetadata();
         const key = this.getKey();
+        const snapshot = Object.assign(Object.create(Object.getPrototypeOf(this)), this, attributes);
+        const nextKey = this.getKey(snapshot);
+
+        const hashKeyChanged = key[metadata.hashKeyName] !== nextKey[metadata.hashKeyName];
+        const sortKeyChanged = metadata.sortKeyName
+            ? key[metadata.sortKeyName] !== nextKey[metadata.sortKeyName]
+            : false;
+
+        if (hashKeyChanged || sortKeyChanged) {
+            throw new Error(
+                `Cannot update key fields for entity "${metadata.tableName}". ` +
+                `Hash key and sort key values are immutable; create a new entity and delete the old one instead.`
+            );
+        }
 
         const toDbModelMapper = (this.constructor as any)[TO_DB_MODEL_METADATA];
         if (toDbModelMapper) {
-            const snapshot = Object.assign(Object.create(Object.getPrototypeOf(this)), this, attributes);
             await this.saveItem(snapshot);
 
             Object.assign(this, attributes);

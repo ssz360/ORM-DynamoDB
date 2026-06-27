@@ -287,6 +287,18 @@ describe('dynamoDbORMteORM - Basic CRUD Operations', () => {
         expect((retrieved as any)?.updatedAt).toBeUndefined();
     });
 
+    it('should reject updates that change key values', async () => {
+        const item = new TestItem(4, 'Original');
+        await item.insert();
+
+        await expect(item.update({ id: 5 })).rejects.toThrow(/Cannot update key fields/i);
+
+        const original = await TestItem.get('4');
+        const moved = await TestItem.get('5');
+        expect(original?.name).toBe('Original');
+        expect(moved).toBeNull();
+    });
+
     it('should delete an item', async () => {
         const item = new TestItem(3, 'To Delete');
         await item.insert();
@@ -658,6 +670,18 @@ describe('dynamoDbORMteORM - ToDbModel and FromDbModel', () => {
         expect((retrieved as any)?.secret).toBeUndefined();
         expect((retrieved as any)?.hKey).toBeUndefined();
         expect((retrieved as any)?.sKey).toBeUndefined();
+    });
+
+    it('should reject mapped updates that change key values', async () => {
+        const item = new TestItemWithFullSerializer(2, 'Visible', 'do-not-store');
+        await item.insert();
+
+        await expect(item.update({ id: 3 })).rejects.toThrow(/Cannot update key fields/i);
+
+        const original = await TestItemWithFullSerializer.get('2');
+        const moved = await TestItemWithFullSerializer.get('3');
+        expect(original?.name).toBe('Visible');
+        expect(moved).toBeNull();
     });
 });
 
