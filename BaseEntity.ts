@@ -49,11 +49,12 @@ export class BaseEntity {
         for (const link of links) {
             const value = source[link.propertyKey];
             const isInline = link.inline ?? false;
+            const idField = `__${link.propertyKey}ID`;
 
             if (isInline) {
                 if (value !== undefined && value !== null) {
                     if (link.isArray) {
-                        item[`__${link.propertyKey}ID`] = (value as BaseEntity[]).map((linkedItem: BaseEntity) => {
+                        item[idField] = (value as BaseEntity[]).map((linkedItem: BaseEntity) => {
                             const linkedKey = linkedItem.getKey();
                             const linkedMetadata = linkedItem.getMetadata();
                             const result: any = {
@@ -74,12 +75,16 @@ export class BaseEntity {
                         if (linkedMetadata.sortKeyName) {
                             result[linkedMetadata.sortKeyName] = linkedKey[linkedMetadata.sortKeyName];
                         }
-                        item[`__${link.propertyKey}ID`] = result;
+                        item[idField] = result;
                     }
+                } else if (value === undefined && source[idField] !== undefined) {
+                    item[idField] = source[idField];
+                } else if (value === null) {
+                    delete item[idField];
                 }
             } else {
                 // Non-inline: ensure no stale __propertyID from a previous loadLinks() is persisted
-                delete item[`__${link.propertyKey}ID`];
+                delete item[idField];
             }
             // Remove the actual linked entity instances from being saved
             delete item[link.propertyKey];
@@ -97,7 +102,28 @@ export class BaseEntity {
             ? (this.constructor as any)[fromDbModelMapper](item)
             : item;
 
+        if (fromDbModelMapper) {
+            for (const key of Object.keys(this)) {
+                delete (this as any)[key];
+            }
+        }
+
         Object.assign(this, itemData);
+
+        const links: LinkMetadata[] = (this.constructor.prototype as any)[LINKS_METADATA] || [];
+        for (const link of links) {
+            const idField = `__${link.propertyKey}ID`;
+
+            if (item[idField] !== undefined) {
+                Object.defineProperty(this, idField, {
+                    value: item[idField],
+                    writable: true,
+                    configurable: true,
+                    enumerable: false
+                });
+            }
+        }
+
         return this;
     }
 

@@ -57,6 +57,30 @@ class TestParentWithInlineLink extends BaseEntity {
 }
 
 @Entity(tableName, 'hKey', 'sKey')
+class TestParentWithInlineLinkMapper extends BaseEntity {
+    @HashKeyValue
+    get hashKey() { return 'PARENT_INLINE_MAPPER'; }
+    @SortKeyValue
+    get sortKey() { return this.parentId.toString(); }
+
+    parentId: number;
+    @LinkObject(TestChild, { inline: true })
+    child: TestChild | undefined;
+
+    constructor(parentId: number = 0) {
+        super();
+        this.parentId = parentId;
+    }
+
+    @FromDbModel
+    static fromDBModelMapper(dbModel: any) {
+        return {
+            parentId: dbModel.parentId
+        };
+    }
+}
+
+@Entity(tableName, 'hKey', 'sKey')
 class TestParentWithNonInlineLink extends BaseEntity {
     @HashKeyValue
     get hashKey() { return 'PARENT_NONINLINE'; }
@@ -323,6 +347,7 @@ describe('dynamoDbORMteORM - Basic CRUD Operations', () => {
 describe('dynamoDbORMteORM - Inline Links', () => {
     afterEach(async () => {
         await cleanupTestData('PARENT_INLINE');
+        await cleanupTestData('PARENT_INLINE_MAPPER');
         await cleanupTestData('CHILD');
     });
 
@@ -352,6 +377,25 @@ describe('dynamoDbORMteORM - Inline Links', () => {
         const retrieved = await TestParentWithInlineLink.get('2');
         await retrieved?.loadLinks();
         expect(retrieved?.child).toBeUndefined();
+    });
+
+    it('should preserve hidden inline link IDs when FromDbModel omits them', async () => {
+        const child = new TestChild(101, 'Mapped Child Data');
+        await child.insert();
+
+        const parent = new TestParentWithInlineLinkMapper(3);
+        parent.child = child;
+        await parent.insert();
+
+        const retrieved = await TestParentWithInlineLinkMapper.get('3');
+        expect(retrieved).toBeDefined();
+        expect(Object.keys(retrieved as any)).not.toContain('__childID');
+        expect((retrieved as any).__childID).toEqual({ hKey: 'CHILD', sKey: '101' });
+
+        await retrieved?.loadLinks();
+        expect(retrieved?.child).toBeDefined();
+        expect(retrieved?.child?.childId).toBe(101);
+        expect(retrieved?.child?.data).toBe('Mapped Child Data');
     });
 });
 
