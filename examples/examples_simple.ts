@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { BaseEntity, Entity, FromDbModel, HashKeyValue, LinkArray, LinkObject, SortKeyValue, ToDbModel } from "./dynamoDbORM";
+import { BaseEntity, Entity, FromDbModel, HashKeyValue, LinkArray, LinkObject, SortKeyValue, ToDbModel } from "../dynamoDbORM";
 
 
 @Entity('test_table', '__hKey', '__sKey') // or @Entity('test_table', '__hKey', '__sKey', new DynamoDBClient({...}))

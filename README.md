@@ -9,7 +9,7 @@ Project site: https://ssz360.github.io/ORM-DynamoDB/
 
 ## 🎬 Demo
 
-<video src="video/demo260705.mp4" controls width="100%"></video>
+<video src="https://github.com/ssz360/ORM-DynamoDB/raw/refs/heads/main/video/demo260705.mp4" controls width="100%"></video>
 
 ## ✨ Features
 
@@ -213,7 +213,14 @@ pnpm build
 Run the local example:
 
 ```bash
-pnpm exec tsx examples.ts
+pnpm dev
+```
+
+Or run a specific example file:
+
+```bash
+pnpm exec tsx examples/examples_simple.ts
+pnpm exec tsx examples/examples_advanced.ts
 ```
 
 Check what will be published:
@@ -235,8 +242,8 @@ Apache-2.0
 
 ## 📖 Examples
 
-See [examples_simple.ts](./examples_simple.ts) for examples.
-See [examples_advanced.ts](./examples_advanced.ts) for advanced examples.
+- [examples/examples_simple.ts](./examples/examples_simple.ts) — getting started
+- [examples/examples_advanced.ts](./examples/examples_advanced.ts) — advanced patterns
 
 ## 🤝 Contributing
 

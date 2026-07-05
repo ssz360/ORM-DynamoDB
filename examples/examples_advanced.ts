@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
-import { BaseEntity, Entity, FromDbModel, HashKeyValue, LinkArray, LinkObject, SortKeyValue, ToDbModel } from "./dynamoDbORM";
-import { paginatedQuery, encodeLinkSegment, getDocClient } from './client';
+import { BaseEntity, Entity, FromDbModel, HashKeyValue, LinkArray, LinkObject, SortKeyValue, ToDbModel } from "../dynamoDbORM";
+import { paginatedQuery, encodeLinkSegment, getDocClient } from '../client';
 
 
 @Entity('test_table', '__hKey', '__sKey') // or @Entity('test_table', '__hKey', '__sKey', new DynamoDBClient({...}))

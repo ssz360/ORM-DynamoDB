@@ -15,5 +15,5 @@
   "include": [
     "*.ts",
     "tests/**/*.ts"
-  ]
+, "examples/examples_advanced.ts"  ]
 }
