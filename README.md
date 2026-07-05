@@ -7,6 +7,10 @@ Lightweight TypeScript decorators for modeling DynamoDB items as classes.
 
 Project site: https://ssz360.github.io/ORM-DynamoDB/
 
+## 🎬 Demo
+
+<video src="video/demo260705.mp4" controls width="100%"></video>
+
 ## ✨ Features
 
 - 🎯 **Type-safe decorators** for DynamoDB entities with full TypeScript support

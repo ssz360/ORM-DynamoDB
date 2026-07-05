@@ -154,6 +154,20 @@
     footer a { font-size: 13px; color: var(--text-muted); text-decoration: none; }
     footer a:hover { color: var(--text); }
 
+    /* Demo video */
+    .video-wrap {
+      margin-top: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--bg-code);
+    }
+    .video-wrap video {
+      width: 100%;
+      display: block;
+      vertical-align: top;
+    }
+
     @media (max-width: 600px) {
       h1 { font-size: 30px; }
       .features { grid-template-columns: 1fr; }
@@ -211,6 +225,18 @@
             <svg id="copy-icon" viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M5 2H1v12h9V9m-5-7h9v9H5V2z" stroke="currentColor" stroke-width="1.2"/></svg>
             Copy
           </button>
+        </div>
+      </section>
+
+      <!-- Demo -->
+      <section class="section">
+        <p class="section-eyebrow">Demo</p>
+        <h2 class="section-title">See it in action.</h2>
+        <p class="section-body">A quick walkthrough of defining entities with decorators, inserting items, querying, and loading linked records.</p>
+        <div class="video-wrap">
+          <video src="video/demo260705.mp4" controls preload="metadata" playsinline>
+            Your browser does not support the video tag. <a href="video/demo260705.mp4">Download the demo video</a>.
+          </video>
         </div>
       </section>
 

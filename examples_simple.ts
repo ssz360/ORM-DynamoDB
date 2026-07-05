@@ -201,7 +201,7 @@ async function test() {
     // function ulidUpperBound(date: Date): string {
     //     return encodeTime(date.getTime(), 10) + 'ZZZZZZZZZZZZZZZZ';  // Largest possible ULID at this instant
     // }
-    // const postsInRange = await Post.queryBetween(ulidLowerBound(''2026-01-01T00:00:00Z''), ulidUpperBound(''2026-01-31T23:59:59Z''));
+    // const postsInRange = await Post.queryBetween(ulidLowerBound('2026-01-01T00:00:00Z'), ulidUpperBound('2026-01-31T23:59:59Z'));
     const newerPosts = await Post.queryGreaterThan('01KVN82QE2VQNJNP1XVN51K0V8'); // posts created after this point in time
     const olderPosts = await Post.queryLessThan('01KVN9AQTCY2AMATVDW505HZ9H'); // posts created before this point in time
     // A ULID prefix match returns every post sharing that timestamp segment,
