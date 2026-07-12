@@ -28,9 +28,6 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Copy demo video
-        run: mkdir -p docs/video && cp video/demo260705.mp4 docs/video/
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

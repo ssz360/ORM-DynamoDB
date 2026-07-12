@@ -9,7 +9,7 @@ Project site: https://ssz360.github.io/ORM-DynamoDB/
 
 ## 🎬 Demo
 
-<video src="https://github.com/ssz360/ORM-DynamoDB/raw/refs/heads/main/video/demo260705.mp4" controls width="100%"></video>
+[![Watch the demo on YouTube](https://raw.githubusercontent.com/ssz360/ORM-DynamoDB/main/video/video-cover.jpg)](https://youtu.be/GSWtWrro_Rc)
 
 ## ✨ Features
 

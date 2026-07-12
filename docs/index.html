@@ -156,16 +156,52 @@
 
     /* Demo video */
     .video-wrap {
+      border-top: 1px solid var(--border);
+      overflow: hidden;
+      background: #000;
+    }
+    .video-embed {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+    }
+    .video-embed iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .demo-reveal {
       margin-top: 28px;
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       overflow: hidden;
       background: var(--bg-code);
     }
-    .video-wrap video {
+    .demo-reveal summary {
+      list-style: none;
+      cursor: pointer;
+      position: relative;
+    }
+    .demo-reveal summary::-webkit-details-marker {
+      display: none;
+    }
+    .demo-cover {
       width: 100%;
       display: block;
       vertical-align: top;
+    }
+    .demo-cover-caption {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(10, 10, 9, 0.85);
+      color: #fff;
     }
 
     @media (max-width: 600px) {
@@ -232,12 +268,24 @@
       <section class="section">
         <p class="section-eyebrow">Demo</p>
         <h2 class="section-title">See it in action.</h2>
-        <p class="section-body">A quick walkthrough of defining entities with decorators, inserting items, querying, and loading linked records.</p>
-        <div class="video-wrap">
-          <video src="https://github.com/ssz360/ORM-DynamoDB/raw/refs/heads/main/video/demo260705.mp4" controls preload="metadata" playsinline>
-            Your browser does not support the video tag. <a href="https://github.com/ssz360/ORM-DynamoDB/raw/refs/heads/main/video/demo260705.mp4">Download the demo video</a>.
-          </video>
-        </div>
+        <p class="section-body">Click the cover to reveal the demo video: entity decorators, inserts, queries, and link loading.</p>
+        <details class="demo-reveal" id="demo-video">
+          <summary aria-label="Show demo video">
+            <img class="demo-cover" src="https://raw.githubusercontent.com/ssz360/ORM-DynamoDB/main/video/video-cover.jpg" alt="Demo video cover for orm-dynamodb" />
+            <span class="demo-cover-caption">Click to play demo</span>
+          </summary>
+          <div class="video-wrap">
+            <div class="video-embed">
+              <iframe
+                src="https://www.youtube.com/embed/GSWtWrro_Rc"
+                title="orm-dynamodb demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+              ></iframe>
+            </div>
+          </div>
+        </details>
       </section>
 
       <!-- Features -->
@@ -488,6 +536,12 @@ BaseEntity.<span class="fn">configure</span>(<span class="kw">new</span> <span c
         btn.innerHTML = '<svg viewBox="0 0 15 15" fill="none" style="width:13px;height:13px"><path d="M2 8l4 4 7-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied';
         setTimeout(() => { btn.innerHTML = orig; }, 2000);
       });
+    }
+
+    const demoVideo = document.getElementById('demo-video');
+    if (demoVideo && location.hash === '#demo-video') {
+      demoVideo.open = true;
+      demoVideo.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   </script>
 
